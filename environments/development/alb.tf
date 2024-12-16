@@ -76,7 +76,7 @@ module "alb" {
   tags = merge(
     local.tags,
     {
-      Name = "${local.name_prefix}-alb"
+      Name = "${local.name_prefix}-alb-test"
     }
   )
 }

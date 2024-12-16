@@ -16,7 +16,7 @@ env:
 
 jobs:
   terraform-plan:
-    name: "Terraform Plan"
+    name: Terraform Plan
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -24,10 +24,10 @@ jobs:
         working-directory: ./environments/development
 
     steps:
-      - name: Checkout the repository to the runner
+      - name: Checkout the repository
         uses: actions/checkout@v2
 
-      - name: Setup Terraform with specified version on the runner
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.2
@@ -107,10 +107,10 @@ jobs:
         working-directory: ./environments/development
 
     steps:
-      - name: Checkout the repository to the runner
+      - name: Checkout the repository
         uses: actions/checkout@v2
 
-      - name: Setup Terraform with specified version on the runner
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.2
