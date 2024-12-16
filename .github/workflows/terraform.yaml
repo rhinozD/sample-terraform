@@ -54,14 +54,12 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           terraform plan -out=tfplan.out -no-color -input=false
-          pwd
-          ls -l
 
       - name: Upload plan
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
-          path: ${{ github.workspace }}/tfplan.out
+          path: ./environments/development/tfplan.out
 
       - name: Terraform Plan Output(PR Only)
         if: github.event_name == 'pull_request'
@@ -128,7 +126,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: tfplan
-          path: ${{ github.workspace }}
+          path: ${{ github.workspace }}/environments/development
 
       - name: Terraform init
         run: |
@@ -137,4 +135,4 @@ jobs:
             terraform init -backend-config="bucket=$BUCKET_TF_STATE"
 
       - name: Terraform apply
-        run: terraform apply -auto-approve -input=false ${{ github.workspace }}/tfplan.out
+        run: terraform apply -auto-approve -input=false ${{ github.workspace }}/environments/development/tfplan.out

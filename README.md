@@ -258,43 +258,45 @@ The `environments/development` directory includes the following components:
 
 ## GitHub Actions Workflow
 
-The project includes a GitHub Actions workflow to manage Terraform infrastructure changes. The workflow is defined in [terraform.yaml](https://www.notion.so/.github/workflows/terraform.yaml) and is triggered on push or pull request to the `main` branch.
+The project includes a GitHub Actions workflow to manage Terraform infrastructure changes. The workflow is defined in [terraform.yaml](https://www.notion.so/.github/workflows/terraform.yaml) and is triggered on push or pull request to the `main` branch. It includes three main jobs: `terraform-plan`, `approval-gate`, and `terraform-apply`.
 
-### Workflow Steps
+### Jobs and Steps
 
-1. **Checkout the repository**:
+1. **`terraform-plan`**:
+This job is responsible for planning the Terraform changes.
+- Checkout the repository:
     
-    ```yaml
-    - name: Checkout the repository to the runner
-      uses: actions/checkout@v2
-    ```
+  ```yaml
+  - name: Checkout the repository
+    uses: actions/checkout@v2
+  ```
     
-2. **Setup Terraform**:
+- Setup Terraform:
     
-    ```yaml
-    - name: Setup Terraform with specified version on the runner
-      uses: hashicorp/setup-terraform@v2
-      with:
-        terraform_version: 1.10.2
-    ```
+  ```yaml
+  - name: Setup Terraform
+    uses: hashicorp/setup-terraform@v2
+    with:
+      terraform_version: 1.10.2
+  ```
     
-3. **Initialize Terraform**:
+- Initialize Terraform(read `tfstate` from S3 remote backend):
     
-    ```yaml
-    - name: Terraform init
-      id: init
-      run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
-    ```
+  ```yaml
+  - name: Terraform init
+    id: init
+    run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
+  ```
     
-4. **Format Terraform files**:
+- Format Terraform files:
     
-    ```yaml
-    - name: Terraform format
-      id: fmt
-      run: terraform fmt -check
-    ```
+  ```yaml
+  - name: Terraform format
+    id: fmt
+    run: terraform fmt -check
+  ```
     
-5. **Validate Terraform configuration**:
+- Validate Terraform configuration:
     
     ```yaml
     - name: Terraform validate
@@ -302,7 +304,7 @@ The project includes a GitHub Actions workflow to manage Terraform infrastructur
       run: terraform validate
     ```
     
-6. **Plan Terraform changes**:
+- Plan Terraform changes:
     
     ```yaml
     - name: Terraform plan
