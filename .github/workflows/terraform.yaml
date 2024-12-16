@@ -15,8 +15,8 @@ env:
   BUCKET_TF_STATE: ${{ secrets.BUCKET_TF_STATE }}
 
 jobs:
-  terraform:
-    name: "Terraform Infrastructure Change Management"
+  terraform-plan:
+    name: "Terraform Plan"
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,13 +46,17 @@ jobs:
 
       - name: Terraform plan
         id: plan
-        if: github.event_name == 'pull_request'
-        run: terraform plan -no-color -input=false
-        continue-on-error: true
+        run: terraform plan -out=tfplan -no-color -input=false
+
+      - name: Upload plan
+        uses: actions/upload-artifact@v2
+        with:
+          name: tfplan
+          path: ./environments/development/tfplan
 
       - name: Terraform Plan Output(PR Only)
-        uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
         env:
           PLAN: ${{ steps.plan.outputs.stdout }}
         with:
@@ -84,19 +88,24 @@ jobs:
 
   approval-gate:
     name: Approval Gate
-    needs: terraform
-    environment: prod
+    needs: terraform-plan
+    environment: development
     runs-on: ubuntu-latest
     steps:
       - name: approved
         env: 
-          ENV_NAME: Prod
+          ENV_NAME: Development
         run: echo "Approve for $ENV_NAME"
 
   terraform-apply:
     name: Terraform Apply
     needs: approval-gate
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./environments/development
+
     steps:
       - name: Checkout the repository to the runner
         uses: actions/checkout@v2
@@ -106,8 +115,14 @@ jobs:
         with:
           terraform_version: 1.10.2
 
+      - name: Download plan
+        uses: actions/download-artifact@v2
+        with:
+          name: tfplan
+          path: ./environments/development/tfplan
+
       - name: Terraform init
         run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
 
       - name: Terraform apply
-        run: terraform apply -auto-approve -input=false
+        run: terraform apply -auto-approve -input=false tfplan
