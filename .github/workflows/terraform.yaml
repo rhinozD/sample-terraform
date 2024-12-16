@@ -16,7 +16,7 @@ env:
 
 jobs:
   terraform-plan:
-    name: "Terraform Plan"
+    name: Terraform Plan
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -24,10 +24,10 @@ jobs:
         working-directory: ./environments/development
 
     steps:
-      - name: Checkout the repository to the runner
+      - name: Checkout the repository
         uses: actions/checkout@v2
 
-      - name: Setup Terraform with specified version on the runner
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.2
@@ -107,10 +107,10 @@ jobs:
         working-directory: ./environments/development
 
     steps:
-      - name: Checkout the repository to the runner
+      - name: Checkout the repository
         uses: actions/checkout@v2
 
-      - name: Setup Terraform with specified version on the runner
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.2
@@ -119,10 +119,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: tfplan
-          path: ./environments/development/tfplan
+          path: ./environments/development
 
       - name: Terraform init
         run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
 
       - name: Terraform apply
-        run: terraform apply -auto-approve -input=false tfplan
+        run: terraform apply -auto-approve -input=false ./environments/development/tfplan
