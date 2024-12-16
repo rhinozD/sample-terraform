@@ -130,8 +130,6 @@ jobs:
 
       - name: Terraform init
         run: |
-            pwd
-            ls -l
             terraform init -backend-config="bucket=$BUCKET_TF_STATE"
 
       - name: Terraform apply
