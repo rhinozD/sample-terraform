@@ -264,172 +264,178 @@ The `environments/development` directory includes the following components:
 
 The project includes a GitHub Actions workflow to manage Terraform infrastructure changes. The workflow is defined in [terraform.yaml](https://www.notion.so/.github/workflows/terraform.yaml) and is triggered on push or pull request to the `main` branch. It includes three main jobs: `terraform-plan`, `approval-gate`, and `terraform-apply`.
 
+### Environment Variables
+- `TF_LOG`: Sets the logging level for Terraform. In this case, it is set to `INFO` to provide informational messages during the Terraform execution.
+- `AWS_ACCESS_KEY_ID`: The AWS access key ID used to authenticate with AWS. This value is stored securely in GitHub Secrets and accessed using `${{ secrets.AWS_ACCESS_KEY_ID }}`.
+- `AWS_SECRET_ACCESS_KEY`: The AWS secret access key used to authenticate with AWS. This value is also stored securely in GitHub Secrets and accessed using `${{ secrets.AWS_SECRET_ACCESS_KEY }}`.
+- `BUCKET_TF_STATE`: The name of the S3 bucket used to store the Terraform state file. This value is stored securely in GitHub Secrets and accessed using `${{ secrets.BUCKET_TF_STATE }}`.
+
 ### Jobs and Steps
 
 #### 1. **`terraform-plan`**:
 This job is responsible for planning the Terraform changes.
-  - Checkout the repository:
-      
-    ```yaml
-    - name: Checkout the repository
-      uses: actions/checkout@v2
-    ```
-      
-  - Setup Terraform:
-      
-    ```yaml
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
-      with:
-        terraform_version: 1.10.2
-    ```
-      
-  - Initialize Terraform(read `tfstate` from S3 remote backend):
-      
-    ```yaml
-    - name: Terraform init
-      id: init
-      run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
-    ```
-      
-  - Format Terraform files:
-      
-    ```yaml
-    - name: Terraform format
-      id: fmt
-      run: terraform fmt -check
-    ```
-      
-  - Validate Terraform configuration:
-      
-    ```yaml
-    - name: Terraform validate
-      id: validate
-      run: terraform validate
-    ```
-      
-  - Plan Terraform changes:
-      
-    ```yaml
-    - name: Terraform plan
-      id: plan
-      if: github.event_name == 'pull_request'
-      run: |
-        terraform plan -out=tfplan.out -no-color -input=false
-    ```
+- Checkout the repository:
+    
+  ```yaml
+  - name: Checkout the repository
+    uses: actions/checkout@v2
+  ```
+    
+- Setup Terraform:
+    
+  ```yaml
+  - name: Setup Terraform
+    uses: hashicorp/setup-terraform@v2
+    with:
+      terraform_version: 1.10.2
+  ```
+    
+- Initialize Terraform(read `tfstate` from S3 remote backend):
+    
+  ```yaml
+  - name: Terraform init
+    id: init
+    run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
+  ```
+    
+- Format Terraform files:
+    
+  ```yaml
+  - name: Terraform format
+    id: fmt
+    run: terraform fmt -check
+  ```
+    
+- Validate Terraform configuration:
+    
+  ```yaml
+  - name: Terraform validate
+    id: validate
+    run: terraform validate
+  ```
+    
+- Plan Terraform changes:
+    
+  ```yaml
+  - name: Terraform plan
+    id: plan
+    if: github.event_name == 'pull_request'
+    run: |
+      terraform plan -out=tfplan.out -no-color -input=false
+  ```
 
-  - Upload plan to artifact:
-      
-    ```yaml
-    - name: Upload plan
-      uses: actions/upload-artifact@v4
-      with:
-        name: tfplan
-        path: ./environments/development/tfplan.out
-    ```
-      
-  - Push plan output to PR comment(only if the event is a PR):
-      
-    ```yaml
-    - name: Terraform Plan Output(PR Only)
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
-      env:
-        PLAN: ${{ steps.plan.outputs.stdout }}
-      with:
-        script: |
-          const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
-          #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
-          #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
-          #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+- Upload plan to artifact:
+    
+  ```yaml
+  - name: Upload plan
+    uses: actions/upload-artifact@v4
+    with:
+      name: tfplan
+      path: ./environments/development/tfplan.out
+  ```
+    
+- Push plan output to PR comment(only if the event is a PR):
+    
+  ```yaml
+  - name: Terraform Plan Output(PR Only)
+    if: github.event_name == 'pull_request'
+    uses: actions/github-script@v6
+    env:
+      PLAN: ${{ steps.plan.outputs.stdout }}
+    with:
+      script: |
+        const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+        #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+        #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+        #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
 
-          <details><summary>Show Plan</summary>
+        <details><summary>Show Plan</summary>
 
-          \`\`\`
-          ${process.env.PLAN}
-          \`\`\`
+        \`\`\`
+        ${process.env.PLAN}
+        \`\`\`
 
-          </details>
-          *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+        </details>
+        *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
 
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: output
-          })
-    ```
-  - "Exit the workflow if the Terraform plan fails:
-      
-    ```yaml
-    - name: Terraform Plan Status
-      if: steps.plan.outcome == 'failure'
-      run: exit 1
-    ```
+        github.rest.issues.createComment({
+          issue_number: context.issue.number,
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          body: output
+        })
+  ```
+- "Exit the workflow if the Terraform plan fails:
+    
+  ```yaml
+  - name: Terraform Plan Status
+    if: steps.plan.outcome == 'failure'
+    run: exit 1
+  ```
 
 #### 2. **`approval-gate`**:
 This job waits for manual approval before proceeding to apply the Terraform changes.
 
-  - **Important**: The repository environment needs to be set up first.
-    - Go to your repository on GitHub.
-    - Click on the `Settings` tab.
-    - In the left sidebar, click on `Environments`.
-    - Click the `New environment` button.
-    - Name the environment: `development`.
-    - Optionally, configure environment protection rules such as required reviewers.
+- **Important**: The repository environment needs to be set up first.
+  - Go to your repository on GitHub.
+  - Click on the `Settings` tab.
+  - In the left sidebar, click on `Environments`.
+  - Click the `New environment` button.
+  - Name the environment: `development`.
+  - Optionally, configure environment protection rules such as required reviewers.
 
-  - Approval step:
-    ```yaml
-    approval-gate:
-      name: Approval Gate
-      needs: terraform-plan
-      environment: development
-      runs-on: ubuntu-latest
-      steps:
-        - name: approved
-          env: 
-            ENV_NAME: Development
-          run: echo "Approve for $ENV_NAME"
+- Approval step:
+  ```yaml
+  approval-gate:
+    name: Approval Gate
+    needs: terraform-plan
+    environment: development
+    runs-on: ubuntu-latest
+    steps:
+      - name: approved
+        env: 
+          ENV_NAME: Development
+        run: echo "Approve for $ENV_NAME"
     ```
 
 #### 3. **`terraform-apply`**:
 
 This job applies the Terraform changes after approval.
-  - Checkout the repository:
-    ```yaml
-    - name: Checkout the repository
-      uses: actions/checkout@v2
-    ```
-  
-  - Setup Terraform:
-    ```yaml
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
-      with:
-        terraform_version: 1.10.2
-    ```
+- Checkout the repository:
+  ```yaml
+  - name: Checkout the repository
+    uses: actions/checkout@v2
+  ```
 
-  - Download plan from artifact:
-    ```yaml
-    - name: Download plan
-      uses: actions/download-artifact@v4
-      with:
-        name: tfplan
-        path: ${{ github.workspace }}/environments/development
-    ```
+- Setup Terraform:
+  ```yaml
+  - name: Setup Terraform
+    uses: hashicorp/setup-terraform@v2
+    with:
+      terraform_version: 1.10.2
+  ```
 
-  - Initialize Terraform(configure S3 remote backend):
-    ```yaml
-    - name: Terraform init
-      run: |
-          terraform init -backend-config="bucket=$BUCKET_TF_STATE"
-    ```
+- Download plan from artifact:
+  ```yaml
+  - name: Download plan
+    uses: actions/download-artifact@v4
+    with:
+      name: tfplan
+      path: ${{ github.workspace }}/environments/development
+  ```
 
-  - Apply Terraform changes::
-    ```yaml
-    - name: Terraform apply
-      run: terraform apply -auto-approve -input=false ${{ github.workspace }}/environments/development/tfplan.out
-    ```
+- Initialize Terraform(configure S3 remote backend):
+  ```yaml
+  - name: Terraform init
+    run: |
+        terraform init -backend-config="bucket=$BUCKET_TF_STATE"
+  ```
+
+- Apply Terraform changes::
+  ```yaml
+  - name: Terraform apply
+    run: terraform apply -auto-approve -input=false ${{ github.workspace }}/environments/development/tfplan.out
+  ```
 
 After a successful applying, the PR can be merged into the main branch.
 
