@@ -10,6 +10,9 @@ This project contains Terraform configurations to manage infrastructure for a sa
 4. **State Management**: Terraform state is managed using an S3 backend, ensuring that the state is stored securely and can be shared among team members.
 5. **Security**: Sensitive information such as AWS credentials and Terraform state bucket name are stored as GitHub secrets, ensuring that they are not exposed in the codebase.
 
+## Infrastructure Overview
+![alt text](infra.png)
+
 ## Project Structure
   ```
   .
