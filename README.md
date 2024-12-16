@@ -1,4 +1,4 @@
-# Sample Terraform Project
+# Terraform Project
 
 This project contains Terraform configurations to manage infrastructure for a sample application. The infrastructure includes resources such as VPC, ECS, ALB, ACM, Route53, and more.
 
@@ -11,64 +11,68 @@ This project contains Terraform configurations to manage infrastructure for a sa
 5. **Security**: Sensitive information such as AWS credentials and Terraform state bucket name are stored as GitHub secrets, ensuring that they are not exposed in the codebase.
 
 ## Project Structure
-```
-.
-├── README.md
-├── environments
-│   └── development
-│       ├── acm.tf
-│       ├── alb.tf
-│       ├── data.tf
-│       ├── ecr.tf
-│       ├── ecs.tf
-│       ├── github-oidc.tf
-│       ├── local.tf
-│       ├── providers.tf
-│       ├── route53.tf
-│       ├── vpc.tf
-│       └── vpce.tf
-└── modules
-    ├── acm
-    │   ├── main.tf
-    │   ├── output.tf
-    │   └── vars.tf
-    ├── alb
-    │   ├── main.tf
-    │   ├── output.tf
-    │   └── vars.tf
-    ├── ecr
-    │   ├── lifecycle_policy.json
-    │   ├── main.tf
-    │   ├── output.tf
-    │   └── vars.tf
-    ├── ecs
-    │   ├── data.tf
-    │   ├── main.tf
-    │   ├── output.tf
-    │   └── var.tf
-    ├── github-oidc
-    │   ├── main.tf
-    │   ├── output.tf
-    │   └── vars.tf
-    ├── route53
-    │   ├── main.tf
-    │   ├── output.tf
-    │   └── vars.tf
-    ├── security-group
-    │   ├── main.tf
-    │   ├── output.tf
-    │   └── var.tf
-    ├── vpc
-    │   ├── data.tf
-    │   ├── local.tf
-    │   ├── main.tf
-    │   ├── output.tf
-    │   └── vars.tf
-    └── vpce
-        ├── main.tf
-        ├── output.tf
-        └── vars.tf
-```
+  ```
+  .
+  ├── .github
+  │   └── workflows
+  │       └── terraform.yaml
+  ├── .gitignore
+  ├── README.md
+  ├── environments
+  │   └── development
+  │       ├── acm.tf
+  │       ├── alb.tf
+  │       ├── data.tf
+  │       ├── ecr.tf
+  │       ├── ecs.tf
+  │       ├── github-oidc.tf
+  │       ├── local.tf
+  │       ├── providers.tf
+  │       ├── route53.tf
+  │       ├── vpc.tf
+  │       └── vpce.tf
+  └── modules
+      ├── acm
+      │   ├── main.tf
+      │   ├── output.tf
+      │   └── vars.tf
+      ├── alb
+      │   ├── main.tf
+      │   ├── output.tf
+      │   └── vars.tf
+      ├── ecr
+      │   ├── lifecycle_policy.json
+      │   ├── main.tf
+      │   ├── output.tf
+      │   └── vars.tf
+      ├── ecs
+      │   ├── data.tf
+      │   ├── main.tf
+      │   ├── output.tf
+      │   └── var.tf
+      ├── github-oidc
+      │   ├── main.tf
+      │   ├── output.tf
+      │   └── vars.tf
+      ├── route53
+      │   ├── main.tf
+      │   ├── output.tf
+      │   └── vars.tf
+      ├── security-group
+      │   ├── main.tf
+      │   ├── output.tf
+      │   └── var.tf
+      ├── vpc
+      │   ├── data.tf
+      │   ├── local.tf
+      │   ├── main.tf
+      │   ├── output.tf
+      │   └── vars.tf
+      └── vpce
+          ├── main.tf
+          ├── output.tf
+          └── vars.tf
+  ```
 
 ### Development Environment Components
 
@@ -82,7 +86,7 @@ The `environments/development` directory includes the following components:
 - **github-oidc.tf**: Configuration for GitHub OIDC provider.
 - **local.tf**: Local variables for the development environment.
 - **providers.tf**: Provider configurations.
-- **route53.tf**: Configuration for Route53 DNS.
+- **route53.tf**: Configuration for Route53 DNS (The domain is registered through Route53 Domain Registrar. In this project, the Hosted Zone used is the one automatically created by Route53 after the domain registration).
 - **vpc.tf**: Configuration for Virtual Private Cloud (VPC).
 - **vpce.tf**: Configuration for VPC Endpoints.
 
@@ -258,68 +262,185 @@ The `environments/development` directory includes the following components:
 
 ## GitHub Actions Workflow
 
-The project includes a GitHub Actions workflow to manage Terraform infrastructure changes. The workflow is defined in [terraform.yaml](https://www.notion.so/.github/workflows/terraform.yaml) and is triggered on push or pull request to the `main` branch.
+The project includes a GitHub Actions workflow to manage Terraform infrastructure changes. The workflow is defined in [terraform.yaml](https://www.notion.so/.github/workflows/terraform.yaml) and is triggered on push or pull request to the `main` branch. It includes three main jobs: `terraform-plan`, `approval-gate`, and `terraform-apply`.
 
-### Workflow Steps
+### Environment Variables
+- `TF_LOG`: Sets the logging level for Terraform. In this case, it is set to `INFO` to provide informational messages during the Terraform execution.
+- `AWS_ACCESS_KEY_ID`: The AWS access key ID used to authenticate with AWS. This value is stored securely in GitHub Secrets and accessed using `${{ secrets.AWS_ACCESS_KEY_ID }}`.
+- `AWS_SECRET_ACCESS_KEY`: The AWS secret access key used to authenticate with AWS. This value is also stored securely in GitHub Secrets and accessed using `${{ secrets.AWS_SECRET_ACCESS_KEY }}`.
+- `BUCKET_TF_STATE`: The name of the S3 bucket used to store the Terraform state file. This value is stored securely in GitHub Secrets and accessed using `${{ secrets.BUCKET_TF_STATE }}`.
 
-1. **Checkout the repository**:
+#### Note: 
+In this project, I am using AWS access keys for authentication with AWS services. The access keys are stored as GitHub Secrets to ensure they are not exposed in the codebase. While using AWS access keys is a quick way to implement authentication, it is recommended to use GitHub OIDC (OpenID Connect) for a more secure and scalable solution.
+
+### Jobs and Steps
+
+#### 1. **`terraform-plan`**:
+This job is responsible for planning the Terraform changes.
+- Checkout the repository:
     
-    ```yaml
-    - name: Checkout the repository to the runner
-      uses: actions/checkout@v2
+  ```yaml
+  - name: Checkout the repository
+    uses: actions/checkout@v2
+  ```
+    
+- Setup Terraform:
+    
+  ```yaml
+  - name: Setup Terraform
+    uses: hashicorp/setup-terraform@v2
+    with:
+      terraform_version: 1.10.2
+  ```
+    
+- Initialize Terraform(read `tfstate` from S3 remote backend):
+    
+  ```yaml
+  - name: Terraform init
+    id: init
+    run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
+  ```
+    
+- Format Terraform files:
+    
+  ```yaml
+  - name: Terraform format
+    id: fmt
+    run: terraform fmt -check
+  ```
+    
+- Validate Terraform configuration:
+    
+  ```yaml
+  - name: Terraform validate
+    id: validate
+    run: terraform validate
+  ```
+    
+- Plan Terraform changes:
+    
+  ```yaml
+  - name: Terraform plan
+    id: plan
+    if: github.event_name == 'pull_request'
+    run: |
+      terraform plan -out=tfplan.out -no-color -input=false
+  ```
+
+- Upload plan to artifact:
+    
+  ```yaml
+  - name: Upload plan
+    uses: actions/upload-artifact@v4
+    with:
+      name: tfplan
+      path: ./environments/development/tfplan.out
+  ```
+    
+- Push plan output to PR comment(only if the event is a PR):
+    
+  ```yaml
+  - name: Terraform Plan Output(PR Only)
+    if: github.event_name == 'pull_request'
+    uses: actions/github-script@v6
+    env:
+      PLAN: ${{ steps.plan.outputs.stdout }}
+    with:
+      script: |
+        const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+        #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+        #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+        #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+        <details><summary>Show Plan</summary>
+
+        \`\`\`
+        ${process.env.PLAN}
+        \`\`\`
+
+        </details>
+        *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+        github.rest.issues.createComment({
+          issue_number: context.issue.number,
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          body: output
+        })
+  ```
+- "Exit the workflow if the Terraform plan fails:
+    
+  ```yaml
+  - name: Terraform Plan Status
+    if: steps.plan.outcome == 'failure'
+    run: exit 1
+  ```
+
+#### 2. **`approval-gate`**:
+This job waits for manual approval before proceeding to apply the Terraform changes.
+
+- **Important**: The repository environment needs to be set up first.
+  - Go to your repository on GitHub.
+  - Click on the `Settings` tab.
+  - In the left sidebar, click on `Environments`.
+  - Click the `New environment` button.
+  - Name the environment: `development`.
+  - Optionally, configure environment protection rules such as required reviewers.
+
+- Approval step:
+  ```yaml
+  approval-gate:
+    name: Approval Gate
+    needs: terraform-plan
+    environment: development
+    runs-on: ubuntu-latest
+    steps:
+      - name: approved
+        env: 
+          ENV_NAME: Development
+        run: echo "Approve for $ENV_NAME"
     ```
-    
-2. **Setup Terraform**:
-    
-    ```yaml
-    - name: Setup Terraform with specified version on the runner
-      uses: hashicorp/setup-terraform@v2
-      with:
-        terraform_version: 1.10.2
-    ```
-    
-3. **Initialize Terraform**:
-    
-    ```yaml
-    - name: Terraform init
-      id: init
-      run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
-    ```
-    
-4. **Format Terraform files**:
-    
-    ```yaml
-    - name: Terraform format
-      id: fmt
-      run: terraform fmt -check
-    ```
-    
-5. **Validate Terraform configuration**:
-    
-    ```yaml
-    - name: Terraform validate
-      id: validate
-      run: terraform validate
-    ```
-    
-6. **Plan Terraform changes**:
-    
-    ```yaml
-    - name: Terraform plan
-      id: plan
-      if: github.event_name == 'pull_request'
-      run: terraform plan -no-color -input=false
-      continue-on-error: true
-    ```
-    
-7. **Apply Terraform changes**:
-    
-    ```yaml
-    - name: Terraform Apply
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -auto-approve -input=false
-    ```
-    
+
+#### 3. **`terraform-apply`**:
+
+This job applies the Terraform changes after approval.
+- Checkout the repository:
+  ```yaml
+  - name: Checkout the repository
+    uses: actions/checkout@v2
+  ```
+
+- Setup Terraform:
+  ```yaml
+  - name: Setup Terraform
+    uses: hashicorp/setup-terraform@v2
+    with:
+      terraform_version: 1.10.2
+  ```
+
+- Download plan from artifact:
+  ```yaml
+  - name: Download plan
+    uses: actions/download-artifact@v4
+    with:
+      name: tfplan
+      path: ${{ github.workspace }}/environments/development
+  ```
+
+- Initialize Terraform(configure S3 remote backend):
+  ```yaml
+  - name: Terraform init
+    run: |
+        terraform init -backend-config="bucket=$BUCKET_TF_STATE"
+  ```
+
+- Apply Terraform changes::
+  ```yaml
+  - name: Terraform apply
+    run: terraform apply -auto-approve -input=false ${{ github.workspace }}/environments/development/tfplan.out
+  ```
+
+After a successful applying, the PR can be merged into the main branch.
 
 This workflow ensures that Terraform configurations are properly formatted, validated, and applied when changes are pushed or pull requests are created for the `main` branch.
 
