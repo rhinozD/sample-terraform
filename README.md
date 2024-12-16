@@ -270,6 +270,9 @@ The project includes a GitHub Actions workflow to manage Terraform infrastructur
 - `AWS_SECRET_ACCESS_KEY`: The AWS secret access key used to authenticate with AWS. This value is also stored securely in GitHub Secrets and accessed using `${{ secrets.AWS_SECRET_ACCESS_KEY }}`.
 - `BUCKET_TF_STATE`: The name of the S3 bucket used to store the Terraform state file. This value is stored securely in GitHub Secrets and accessed using `${{ secrets.BUCKET_TF_STATE }}`.
 
+#### Note: 
+In this project, I am using AWS access keys for authentication with AWS services. The access keys are stored as GitHub Secrets to ensure they are not exposed in the codebase. While using AWS access keys is a quick way to implement authentication, it is recommended to use GitHub OIDC (OpenID Connect) for a more secure and scalable solution.
+
 ### Jobs and Steps
 
 #### 1. **`terraform-plan`**:
