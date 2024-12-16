@@ -1,12 +1,10 @@
 variable "name" {
   type        = string
-  default     = ""
   description = "Security group name"
 }
 
 variable "vpc_id" {
   type        = string
-  default     = ""
   description = "VPC ID"
 }
 

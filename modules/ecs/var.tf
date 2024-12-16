@@ -61,7 +61,6 @@ variable "subnet_ids" {
 
 variable "security_group_rules" {
   type        = any
-  default     = {}
   description = "ECS service security group rules"
 }
 

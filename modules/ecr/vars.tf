@@ -6,7 +6,6 @@ variable "ecr_policy" {
 
 variable "ecr_repo_name" {
   type        = string
-  default     = ""
   description = "ECR repository name"
 }
 
